@@ -5,6 +5,10 @@ on:
     branches:
       - main
 
+permissions:
+  id-token: write
+  contents: write
+
 jobs:
   build-library:
     runs-on: ubuntu-latest
@@ -119,7 +123,7 @@ jobs:
           name: line-coverage-info
           path: packages/library/coverage
       - name: SonarCloud Analysis
-        uses: SonarSource/sonarqube-scan-action@v7.0.0
+        uses: SonarSource/sonarqube-scan-action@v8
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
@@ -164,11 +168,15 @@ jobs:
     needs: [sonarcloud, snyk]
     steps:
       - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: 'npm'
 
-      - name: Authenticate with NPM
-        run: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Node & NPM versions
+        run: |
+          node --version
+          npm --version
 
       - name: Get package version
         id: package_version
@@ -191,6 +199,4 @@ jobs:
 
       - name: Publish to NPM
         if: env.VERSION_EXISTS == 'false'
-        run: npm publish --workspace=@tomplum/react-git-log --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --workspace=@tomplum/react-git-log --provenance
